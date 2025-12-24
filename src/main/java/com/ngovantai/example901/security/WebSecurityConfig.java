@@ -73,12 +73,6 @@ public class WebSecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAuthority("ROLE_ADMIN")
 
-                        // ========== TABLES ==========
-                        .requestMatchers(HttpMethod.POST, "/api/tables/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/tables/**")
-                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLOYEE", "ROLE_STAFF")
-                        .requestMatchers(HttpMethod.DELETE, "/api/tables/**").hasAuthority("ROLE_ADMIN")
-
                         // ========== BILLS ==========
                         .requestMatchers("/api/bills/**")
                         .hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLOYEE", "ROLE_STAFF")
