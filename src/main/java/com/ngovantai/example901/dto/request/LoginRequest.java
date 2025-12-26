@@ -1,11 +1,13 @@
 package com.ngovantai.example901.dto.request;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 public class LoginRequest {
+    @NotBlank(message = "Username không được để trống")
     private String username;
+
+    @NotBlank(message = "Password không được để trống")
     private String password;
 }

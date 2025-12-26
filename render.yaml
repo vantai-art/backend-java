@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: example901-backend
+    runtime: docker # Thay đổi này - dùng Docker để chạy Java
+    region: singapore
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -Dserver.port=$PORT -jar target/app.jar
+    healthCheckPath: /
+    envVars:
+      - key: JAVA_TOOL_OPTIONS
+        value: "-Xmx512m"
