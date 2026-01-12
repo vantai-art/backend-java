@@ -24,5 +24,5 @@ public class SignupRequest {
     private String email;
 
     private String phone;
-    private User.Role role; // Optional, mặc định là USER
+    private User.Role role;
 }

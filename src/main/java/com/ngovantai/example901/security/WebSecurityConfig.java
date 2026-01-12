@@ -36,17 +36,13 @@ public class WebSecurityConfig {
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
                 http
-                                // ✅ Disable CSRF (vì dùng JWT)
                                 .csrf(csrf -> csrf.disable())
 
-                                // ✅ Enable CORS với config từ CorsConfig.java
                                 .cors(cors -> cors.configure(http))
 
-                                // ✅ Stateless session (không lưu session)
                                 .sessionManagement(session -> session.sessionCreationPolicy(
                                                 SessionCreationPolicy.STATELESS))
 
-                                // ✅ Authorization rules
                                 .authorizeHttpRequests(auth -> auth
                                                 // ========== PUBLIC ENDPOINTS ==========
                                                 .requestMatchers(
@@ -99,6 +95,14 @@ public class WebSecurityConfig {
                                                 .requestMatchers(HttpMethod.DELETE, "/api/categories/**")
                                                 .hasAuthority("ROLE_ADMIN")
 
+                                                // ========== TABLES ==========
+                                                .requestMatchers(HttpMethod.POST, "/api/tables/**")
+                                                .hasAuthority("ROLE_ADMIN")
+                                                .requestMatchers(HttpMethod.PUT, "/api/tables/**")
+                                                .hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLOYEE", "ROLE_STAFF")
+                                                .requestMatchers(HttpMethod.DELETE, "/api/tables/**")
+                                                .hasAuthority("ROLE_ADMIN")
+
                                                 // ========== BILLS ==========
                                                 .requestMatchers("/api/bills/**")
                                                 .hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLOYEE", "ROLE_STAFF")
@@ -137,7 +141,6 @@ public class WebSecurityConfig {
                                                 // ========== ALL OTHER REQUESTS ==========
                                                 .anyRequest().authenticated())
 
-                                // ✅ Add JWT filter
                                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();

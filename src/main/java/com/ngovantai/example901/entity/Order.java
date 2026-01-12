@@ -26,6 +26,11 @@ public class Order {
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "table_id", nullable = false)
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
+    private Tables table;
+
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "employee_id", nullable = true)
     @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "password" })
     private User employee;

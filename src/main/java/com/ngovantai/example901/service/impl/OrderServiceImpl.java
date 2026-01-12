@@ -14,6 +14,7 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final TablesRepository tablesRepository;
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
 
@@ -33,6 +34,9 @@ public class OrderServiceImpl implements OrderService {
         // ✅ Lấy thông tin user đang đăng nhập từ JWT
         User creator = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("❌ Không tìm thấy user: " + username));
+
+        Tables table = tablesRepository.findById(dto.getTableId())
+                .orElseThrow(() -> new RuntimeException("❌ Table not found with id: " + dto.getTableId()));
 
         Promotion promotion = null;
         if (dto.getPromotionId() != null) {
