@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "orders")
@@ -25,10 +27,11 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // ✅ Thay đổi từ Tables sang RestaurantTable
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "table_id", nullable = false)
-    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
-    private Tables table;
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "orders" })
+    private RestaurantTable table;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "employee_id", nullable = true)
@@ -54,6 +57,11 @@ public class Order {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // Quan hệ với OrderItem
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<OrderItem> items = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -66,5 +74,15 @@ public class Order {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // Phương thức tính tổng tiền từ items
+    public BigDecimal calculateTotal() {
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return items.stream()
+                .map(OrderItem::getSubtotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

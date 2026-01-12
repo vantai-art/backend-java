@@ -6,6 +6,7 @@ import com.ngovantai.example901.repository.*;
 import com.ngovantai.example901.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
-    private final TablesRepository tablesRepository;
+    private final RestaurantTableRepository tablesRepository; // Đổi từ TablesRepository
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
 
@@ -30,13 +31,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public Order createOrder(OrderDto dto, String username) {
-        // ✅ Lấy thông tin user đang đăng nhập từ JWT
         User creator = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("❌ Không tìm thấy user: " + username));
 
-        Tables table = tablesRepository.findById(dto.getTableId())
+        RestaurantTable table = tablesRepository.findById(dto.getTableId()) // Đổi từ Tables sang RestaurantTable
                 .orElseThrow(() -> new RuntimeException("❌ Table not found with id: " + dto.getTableId()));
+
+        // Cập nhật trạng thái bàn
+        if (table.getStatus() == RestaurantTable.TableStatus.FREE) {
+            table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+            tablesRepository.save(table);
+        }
 
         Promotion promotion = null;
         if (dto.getPromotionId() != null) {
@@ -44,8 +51,6 @@ public class OrderServiceImpl implements OrderService {
                     .orElseThrow(() -> new RuntimeException("❌ Promotion not found with id: " + dto.getPromotionId()));
         }
 
-        // ✅ Phân quyền tự động: nếu là STAFF / EMPLOYEE => gán employee
-        // nếu là USER => gán user
         User employee = null;
         User customer = null;
 
@@ -56,6 +61,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = Order.builder()
+                .table(table) // Set table
                 .employee(employee)
                 .user(customer)
                 .promotion(promotion)
@@ -68,14 +74,23 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public Order updateOrder(Long id, OrderDto dto) {
         Order order = getOrderById(id);
 
         if (dto.getNotes() != null)
             order.setNotes(dto.getNotes());
 
-        if (dto.getStatus() != null)
-            order.setStatus(Order.Status.valueOf(dto.getStatus()));
+        if (dto.getStatus() != null) {
+            Order.Status newStatus = Order.Status.valueOf(dto.getStatus());
+            order.setStatus(newStatus);
+
+            // Nếu order đã thanh toán, cập nhật trạng thái bàn
+            if (newStatus == Order.Status.PAID || newStatus == Order.Status.CANCELLED) {
+                order.getTable().setStatus(RestaurantTable.TableStatus.FREE);
+                tablesRepository.save(order.getTable());
+            }
+        }
 
         if (dto.getTotalAmount() != null)
             order.setTotalAmount(dto.getTotalAmount());
@@ -90,10 +105,14 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void deleteOrder(Long id) {
-        if (!orderRepository.existsById(id)) {
-            throw new RuntimeException("❌ Cannot delete: Order not found with id " + id);
-        }
+        Order order = getOrderById(id);
+
+        // Cập nhật trạng thái bàn trước khi xóa order
+        order.getTable().setStatus(RestaurantTable.TableStatus.FREE);
+        tablesRepository.save(order.getTable());
+
         orderRepository.deleteById(id);
     }
 }

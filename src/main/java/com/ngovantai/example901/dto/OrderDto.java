@@ -2,6 +2,7 @@ package com.ngovantai.example901.dto;
 
 import lombok.*;
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -17,4 +18,5 @@ public class OrderDto {
     private BigDecimal totalAmount;
     private Long promotionId;
     private String notes;
+    private List<OrderItemDto> items;
 }
