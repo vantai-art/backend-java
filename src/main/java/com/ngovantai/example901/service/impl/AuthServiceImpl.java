@@ -5,6 +5,7 @@ import com.ngovantai.example901.entity.User;
 import com.ngovantai.example901.repository.PasswordResetTokenRepository;
 import com.ngovantai.example901.repository.UserRepository;
 import com.ngovantai.example901.service.AuthService;
+import com.ngovantai.example901.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,13 +20,19 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService; // ✅ Inject EmailService
 
     @Override
     @Transactional
-    public String createPasswordResetToken(String email) {
-        // ✅ Tìm user theo email
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("❌ Email không tồn tại trong hệ thống"));
+    public String createPasswordResetToken(String username, String email) {
+        // ✅ Tìm user theo username
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("❌ Tên đăng nhập không tồn tại"));
+
+        // ✅ Kiểm tra email có khớp không
+        if (!email.equalsIgnoreCase(user.getEmail())) {
+            throw new RuntimeException("❌ Tên đăng nhập và email không khớp");
+        }
 
         // ✅ Xóa token cũ (nếu có)
         tokenRepository.deleteByUser(user);
@@ -42,7 +49,10 @@ public class AuthServiceImpl implements AuthService {
 
         tokenRepository.save(resetToken);
 
-        System.out.println("🔑 [RESET TOKEN] Created for: " + email + " | Token: " + token);
+        System.out.println("🔑 [RESET TOKEN] Created for: " + username + " | Email: " + email);
+
+        // ✅ GỬI EMAIL
+        emailService.sendPasswordResetEmail(email, token);
 
         return token;
     }
