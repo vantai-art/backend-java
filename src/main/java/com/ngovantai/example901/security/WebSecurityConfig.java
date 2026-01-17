@@ -51,6 +51,8 @@ public class WebSecurityConfig {
                                                                 "/api/auth/forgot-password",
                                                                 "/api/auth/reset-password",
                                                                 "/api/auth/verify-token",
+                                                                "/api/test-email",
+                                                                "/api/email-config",
                                                                 "/ws/**",
                                                                 "/api/payments/vnpay/callback")
                                                 .permitAll()
