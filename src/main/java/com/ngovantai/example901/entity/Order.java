@@ -29,7 +29,7 @@ public class Order {
 
     // ✅ Thay đổi từ Tables sang RestaurantTable
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "table_id", nullable = false)
+    @JoinColumn(name = "table_id", nullable = true)
     @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "orders" })
     private RestaurantTable table;
 

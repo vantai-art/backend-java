@@ -15,7 +15,7 @@ import java.util.List;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
-    private final RestaurantTableRepository tablesRepository; // Đổi từ TablesRepository
+    private final RestaurantTableRepository tablesRepository;
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
 
@@ -33,24 +33,31 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public Order createOrder(OrderDto dto, String username) {
+        // ✅ Tìm user từ JWT username
         User creator = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("❌ Không tìm thấy user: " + username));
 
-        RestaurantTable table = tablesRepository.findById(dto.getTableId()) // Đổi từ Tables sang RestaurantTable
-                .orElseThrow(() -> new RuntimeException("❌ Table not found with id: " + dto.getTableId()));
+        // ✅ Table có thể null cho đơn hàng online
+        RestaurantTable table = null;
+        if (dto.getTableId() != null) {
+            table = tablesRepository.findById(dto.getTableId())
+                    .orElseThrow(() -> new RuntimeException("❌ Table not found with id: " + dto.getTableId()));
 
-        // Cập nhật trạng thái bàn
-        if (table.getStatus() == RestaurantTable.TableStatus.FREE) {
-            table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
-            tablesRepository.save(table);
+            // Cập nhật trạng thái bàn nếu bàn đang trống
+            if (table.getStatus() == RestaurantTable.TableStatus.FREE) {
+                table.setStatus(RestaurantTable.TableStatus.OCCUPIED);
+                tablesRepository.save(table);
+            }
         }
 
+        // ✅ Promotion có thể null
         Promotion promotion = null;
         if (dto.getPromotionId() != null) {
             promotion = promotionRepository.findById(dto.getPromotionId())
                     .orElseThrow(() -> new RuntimeException("❌ Promotion not found with id: " + dto.getPromotionId()));
         }
 
+        // ✅ Phân biệt employee và customer dựa trên role
         User employee = null;
         User customer = null;
 
@@ -60,8 +67,9 @@ public class OrderServiceImpl implements OrderService {
             customer = creator;
         }
 
+        // ✅ Tạo Order với table có thể null
         Order order = Order.builder()
-                .table(table) // Set table
+                .table(table)
                 .employee(employee)
                 .user(customer)
                 .promotion(promotion)
@@ -85,8 +93,9 @@ public class OrderServiceImpl implements OrderService {
             Order.Status newStatus = Order.Status.valueOf(dto.getStatus());
             order.setStatus(newStatus);
 
-            // Nếu order đã thanh toán, cập nhật trạng thái bàn
-            if (newStatus == Order.Status.PAID || newStatus == Order.Status.CANCELLED) {
+            // ✅ Chỉ cập nhật trạng thái bàn nếu order có bàn
+            if ((newStatus == Order.Status.PAID || newStatus == Order.Status.CANCELLED)
+                    && order.getTable() != null) {
                 order.getTable().setStatus(RestaurantTable.TableStatus.FREE);
                 tablesRepository.save(order.getTable());
             }
@@ -109,9 +118,11 @@ public class OrderServiceImpl implements OrderService {
     public void deleteOrder(Long id) {
         Order order = getOrderById(id);
 
-        // Cập nhật trạng thái bàn trước khi xóa order
-        order.getTable().setStatus(RestaurantTable.TableStatus.FREE);
-        tablesRepository.save(order.getTable());
+        // ✅ Chỉ cập nhật trạng thái bàn nếu order có bàn
+        if (order.getTable() != null) {
+            order.getTable().setStatus(RestaurantTable.TableStatus.FREE);
+            tablesRepository.save(order.getTable());
+        }
 
         orderRepository.deleteById(id);
     }
