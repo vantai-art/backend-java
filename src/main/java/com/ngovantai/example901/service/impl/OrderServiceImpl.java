@@ -1,6 +1,7 @@
 package com.ngovantai.example901.service.impl;
 
 import com.ngovantai.example901.dto.OrderDto;
+import com.ngovantai.example901.dto.OrderItemDto;
 import com.ngovantai.example901.entity.*;
 import com.ngovantai.example901.repository.*;
 import com.ngovantai.example901.service.OrderService;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -18,6 +20,7 @@ public class OrderServiceImpl implements OrderService {
     private final RestaurantTableRepository tablesRepository;
     private final PromotionRepository promotionRepository;
     private final UserRepository userRepository;
+    private final ProductRepository productRepository; // ← THÊM DÒN NÀY
 
     @Override
     public List<Order> getAllOrders() {
@@ -78,7 +81,48 @@ public class OrderServiceImpl implements OrderService {
                 .totalAmount(dto.getTotalAmount())
                 .build();
 
-        return orderRepository.save(order);
+        // ✅ Lưu order trước
+        Order savedOrder = orderRepository.save(order);
+
+        // 🔥 TỰ ĐỘNG TẠO ORDER ITEMS từ DTO
+        if (dto.getItems() != null && !dto.getItems().isEmpty()) {
+            for (OrderItemDto itemDto : dto.getItems()) {
+                // Validate product tồn tại
+                Product product = productRepository.findById(itemDto.getProductId())
+                        .orElseThrow(() -> new RuntimeException("❌ Product not found: " + itemDto.getProductId()));
+
+                // Validate quantity
+                if (itemDto.getQuantity() == null || itemDto.getQuantity() <= 0) {
+                    throw new RuntimeException("❌ Quantity must be greater than 0");
+                }
+
+                // Validate price
+                if (itemDto.getPrice() == null || itemDto.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    throw new RuntimeException("❌ Price must be greater than 0");
+                }
+
+                // Tính subtotal
+                BigDecimal subtotal = itemDto.getPrice()
+                        .multiply(BigDecimal.valueOf(itemDto.getQuantity()));
+
+                // Tạo OrderItem
+                OrderItem item = OrderItem.builder()
+                        .order(savedOrder)
+                        .product(product)
+                        .quantity(itemDto.getQuantity())
+                        .price(itemDto.getPrice())
+                        .subtotal(subtotal)
+                        .build();
+
+                // Thêm vào list items của order
+                savedOrder.getItems().add(item);
+            }
+
+            // Lưu lại order với items
+            savedOrder = orderRepository.save(savedOrder);
+        }
+
+        return savedOrder;
     }
 
     @Override
